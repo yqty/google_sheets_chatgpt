@@ -1,0 +1,83 @@
+// 定义常量和模板字符串
+const API_KEYS = [
+  "XXXX",
+  "XXX",
+  "XXX",
+  "XXX",
+  "XXX",
+  "XXX",
+  "XXX"]; // 填入你的其他API_KEY
+const MODEL_TYPE = "gpt-3.5-turbo";
+const TEMPERATURE = 0;
+const MAX_TOKENS = 3896;
+// 填入你的功能定义
+const AA_PROMPT_TEMPLATE = "XXX ";
+const BB_PROMPT_TEMPLATE = "XXX";
+
+// 建立一个下拉菜单
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("GPT-EXCEL生成工具")
+    .addItem("标题", "generateAA")
+    .addItem("故事", "generateBB")
+    .addToUi();
+}
+
+// 生成的函数
+function generate(promptTemplate) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const selectedRange = sheet.getActiveRange();
+  const numRows = selectedRange.getNumRows();
+  const numCols = selectedRange.getNumColumns();
+  const numKeys = API_KEYS.length;
+
+  for (let i = 0; i < numRows; i++) {
+    for (let j = 0; j < numCols; j++) {
+      const currentCell = selectedRange.getCell(i + 1, j + 1);
+      const selectedText = currentCell.getValue();
+      const prompt = Utilities.formatString(promptTemplate, selectedText);
+
+      let generatedText = "";
+      let apiIndex = 0;
+      while (generatedText === "" && apiIndex < numKeys) {
+        const requestBody = {
+          model: MODEL_TYPE,
+          messages: [{ role: "user", content: prompt }],
+          temperature: TEMPERATURE,
+          max_tokens: MAX_TOKENS,
+        };
+
+        const requestOptions = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + API_KEYS[apiIndex],
+          },
+          payload: JSON.stringify(requestBody),
+        };
+
+        const response = UrlFetchApp.fetch(
+          "https://api.openai.com/v1/chat/completions",
+          requestOptions
+        );
+        const responseText = response.getContentText();
+        const json = JSON.parse(responseText);
+        generatedText = json["choices"][0]["text"];
+
+        apiIndex++;
+      }
+
+      currentCell.offset(0, 1).setValue(generatedText.toString());
+    }
+  }
+}
+
+// AA
+function generateAA() {
+  generate(AA_PROMPT_TEMPLATE);
+}
+
+// BB
+function generateBB() {
+  generate(BB_PROMPT_TEMPLATE);
+}
